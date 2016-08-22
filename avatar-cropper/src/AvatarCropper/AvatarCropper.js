@@ -6,21 +6,20 @@ class AvatarCropper extends Component {
   constructor (props) {
     super(props)
 
-    this.state            = {}
-    this.image            = null
-    this.initialX         = 0
-    this.initialY         = 0
-
-    this.onDrop           = this.onDrop.bind(this)
-    this.draw             = this.draw.bind(this)
-    this.scaleImage       = this.scaleImage.bind(this)
-    this.handleTouchStart = this.handleTouchStart.bind(this)
-    this.handleTouchMove  = this.handleTouchMove.bind(this)
-    this.handleTouchEnd   = this.handleTouchEnd.bind(this)
-    this.handleMouseOut   = this.handleMouseOut.bind(this)
+    this.state = {}
+    this.image = null
+    this.initialX = 0
+    this.initialY = 0
+    this.factor = 1
+    this.imageData = {
+      image: null,
+      initialX: 0,
+      initialY: 0,
+      factor: 1
+    }
   }
 
-  onDrop (file) {
+  onDrop = file => {
     if (file[0].constructor !== File) return false
 
     const img = file[0]
@@ -35,7 +34,7 @@ class AvatarCropper extends Component {
     this.setState({ hasImage: true })
   }
 
-  draw () {
+  draw = () => {
     const { canvas, container } = this.refs
     const context = canvas.getContext('2d')
 
@@ -73,8 +72,8 @@ class AvatarCropper extends Component {
 
       if (this.modY <= 0) {
         this.finalY = 0
-      } else if (this.modY >= canvas.height - this.finalHeight) {
-        this.finalY = canvas.height - this.finalHeight
+      } else if (this.modY >= canvas.height - this.finalHeight - 0) {
+        this.finalY = canvas.height - this.finalHeight - 0
       } else {
         this.finalY = this.modY
       }
@@ -93,40 +92,20 @@ class AvatarCropper extends Component {
       this.initialHeight,
       this.finalX,
       this.finalY,
-      this.finalWidth,
-      this.finalHeight
+      this.finalWidth * this.factor,
+      this.finalHeight * this.factor
     )
   }
 
-  scaleImage (e, factor) {
+  scaleImage = e => {
     e.preventDefault()
-    const { canvas } = this.refs
-    const context = canvas.getContext('2d')
 
-    const diffX = Math.round((this.finalWidth - (this.finalWidth * factor)) / 2)
-    const diffY = Math.round((this.finalHeight - (this.finalHeight * factor)) / 2)
+    this.factor = e.target.value / 50
 
-    this.finalX = this.finalX + diffX
-    this.finalY = this.finalY + diffY
-    this.touchEnd = { x: this.finalX, y: this.finalY }
-    this.finalWidth = this.finalWidth * factor
-    this.finalHeight = this.finalHeight * factor
-
-    context.clearRect(0, 0, canvas.width, canvas.height)
-    context.drawImage(
-      this.image,
-      this.initialX,
-      this.initialY,
-      this.initialWidth,
-      this.initialHeight,
-      this.finalY,
-      this.finalX,
-      this.finalWidth,
-      this.finalHeight
-    )
+    this.draw()
   }
 
-  handleTouchStart (e) {
+  handleTouchStart = e => {
     if (this.image) {
       e.preventDefault()
       this.setState({ dragging: true })
@@ -138,7 +117,7 @@ class AvatarCropper extends Component {
     }
   }
 
-  handleTouchMove (e) {
+  handleTouchMove = e => {
     if (this.state.dragging && this.image) {
       e.preventDefault()
       this.pos = {
@@ -149,7 +128,7 @@ class AvatarCropper extends Component {
     }
   }
 
-  handleTouchEnd (e) {
+  handleTouchEnd = e => {
     if (this.image) {
       e.preventDefault()
       this.setState({ dragging: false })
@@ -157,7 +136,7 @@ class AvatarCropper extends Component {
     }
   }
 
-  handleMouseOut (e) {
+  handleMouseOut = e => {
     if (this.image) {
       e.preventDefault()
       if (this.state.dragging && e.buttons === 1) {
@@ -194,12 +173,12 @@ class AvatarCropper extends Component {
           style={{ pointerEvents: this.state.hasImage ? 'auto' : 'none' }}
         />
         <div className="mask" />
-        <button onClick={ e => this.scaleImage(e, 2) }>
-          scaleUp
-        </button>
-        <button onClick={ e => this.scaleImage(e, .5) }>
-          scaleDown
-        </button>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          onChange={ e => this.scaleImage(e) }
+        />
         <div
           className="mouseoutTrigger"
           onMouseMove={ this.handleMouseOut }
