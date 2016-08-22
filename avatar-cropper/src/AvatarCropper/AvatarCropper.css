@@ -1,0 +1,65 @@
+.AvatarCropper {
+  position: relative;
+  width: 500px;
+  height: 500px;
+  margin: 30px auto;
+}
+
+@media (max-width: 500px) {
+  .AvatarCropper, .mask {
+    transform: scale(100vw);
+  }
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: -webkit-grab;
+}
+
+.Dropzone {
+  position: relative;
+  width: 100%;
+}
+
+.mask {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%);
+  width: 500px;
+  height: 100%;
+  border: 160px solid rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.mouseoutTrigger {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: all;
+  cursor: -webkit-grab;
+}
+
+.dragIndicatorContainer {
+  color: rgba(255,255,255,.8);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dragIndicator {
+  background: rgba(0, 0, 0, .2);
+  padding: 5px 10px;
+  border-radius: 3px;
+}
