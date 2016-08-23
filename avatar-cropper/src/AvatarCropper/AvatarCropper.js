@@ -6,11 +6,9 @@ class AvatarCropper extends Component {
   constructor (props) {
     super(props)
 
-    this.state = {}
-    this.image = null
-    this.initialX = 0
-    this.initialY = 0
-    this.factor = 1
+    this.state = {
+      hasImage: false
+    }
     this.imageData = {
       image: null,
       initialX: 0,
@@ -25,129 +23,204 @@ class AvatarCropper extends Component {
     const img = file[0]
     const reader = new FileReader()
     const image = new Image()
+    const self = this
 
-    image.onload = () => this.draw()
+    image.onload = function loadImage () {
+      const containerWidth =
+        self.refs.container.getBoundingClientRect().width
+
+      self.imageData = {
+        ...self.imageData,
+        initialWidth: this.width,
+        initialHeight: this.height
+      }
+
+      if (this.width <= containerWidth) {
+        self.imageData = {
+          ...self.imageData,
+          finalWidth: this.width,
+          finalHeight: this.height
+        }
+      } else {
+        self.imageData = {
+          ...self.imageData,
+          finalWidth: containerWidth,
+          finalHeight: containerWidth * (this.height / this.width)
+        }
+      }
+
+      self.draw()
+    }
+
     reader.onload = e => { image.src = e.target.result }
     reader.readAsDataURL(img)
 
-    this.image = image
+    this.imageData = { ...this.imageData, image }
     this.setState({ hasImage: true })
   }
 
   draw = () => {
-    const { canvas, container } = this.refs
+    const {
+      image,
+      initialX,
+      initialY,
+      initialWidth,
+      initialHeight,
+      finalWidth,
+      finalHeight,
+      factor
+    } = this.imageData
+
+    const { canvas } = this.refs
     const context = canvas.getContext('2d')
 
-    if (!this.initialWidth) {
-      canvas.width = 500
-      canvas.height = 500
-      this.initialWidth = this.image.width
-      this.initialHeight = this.image.height
+    if (this.imageData.touchStart !== undefined) {
+      const {
+        pos,
+        touchStart,
+        lastPos
+      } = this.imageData
 
-      if (this.image.width <= container.getBoundingClientRect().width) {
-        this.finalWidth = this.image.width
-        this.finalHeight = this.image.height
-      } else {
-        this.finalWidth = container.getBoundingClientRect().width
-        this.finalHeight = this.finalWidth * (this.image.height / this.image.width)
-      }
-    }
-
-    if (this.pos !== undefined) {
-      this.modX = Math.round(this.touchEnd !== undefined ?
-        this.touchEnd.x - (this.touchStart.x - this.pos.x) :
-        (canvas.width - this.finalWidth) / 2 - (this.touchStart.x - this.pos.x))
-
-      this.modY = Math.round(this.touchEnd !== undefined ?
-        this.touchEnd.y - (this.touchStart.y - this.pos.y) :
-        (canvas.height - this.finalHeight) / 2 - (this.touchStart.y - this.pos.y))
-
-      if (this.modX <= 0) {
-        this.finalX = 0
-      } else if (this.modX >= canvas.width - this.finalWidth) {
-        this.finalX = canvas.width - this.finalWidth
-      } else {
-        this.finalX = this.modX
+      this.imageData = {
+        ...this.imageData,
+        modX: Math.round(lastPos !== undefined ?
+          lastPos.x - (touchStart.x - pos.x) :
+          (canvas.width - finalWidth) / 2 - (touchStart.x - pos.x)),
+        modY: Math.round(lastPos !== undefined ?
+          lastPos.y - (touchStart.y - pos.y) :
+          (canvas.height - finalHeight) / 2 - (touchStart.y - pos.y))
       }
 
-      if (this.modY <= 0) {
-        this.finalY = 0
-      } else if (this.modY >= canvas.height - this.finalHeight - 0) {
-        this.finalY = canvas.height - this.finalHeight - 0
+      const { modX, modY } = this.imageData
+
+      if (modX <= 0) {
+        this.imageData = { ...this.imageData, finalX: 0 }
+      } else if (modX >= canvas.width - finalWidth) {
+        this.imageData = { ...this.imageData, finalX: canvas.width - finalWidth }
       } else {
-        this.finalY = this.modY
+        this.imageData = { ...this.imageData, finalX: modX }
+      }
+
+      if (modY <= 0) {
+        this.imageData = { ...this.imageData, finalY: 0 }
+      } else if (modY >= canvas.height - finalHeight) {
+        this.imageData = { ...this.imageData, finalY: canvas.height - finalHeight }
+      } else {
+        this.imageData = { ...this.imageData, finalY: modY }
       }
 
     } else {
-      this.finalY = (canvas.height - this.finalHeight) / 2
-      this.finalX = (canvas.width - this.finalWidth) / 2
+      this.imageData = {
+        ...this.imageData,
+        finalX: (canvas.width - finalWidth) / 2,
+        finalY: (canvas.height - finalHeight) / 2
+      }
     }
+
+    const { finalX, finalY } = this.imageData
 
     context.clearRect(0, 0, canvas.width, canvas.height)
     context.drawImage(
-      this.image,
-      this.initialX,
-      this.initialY,
-      this.initialWidth,
-      this.initialHeight,
-      this.finalX,
-      this.finalY,
-      this.finalWidth * this.factor,
-      this.finalHeight * this.factor
+      image,
+      initialX,
+      initialY,
+      initialWidth,
+      initialHeight,
+      finalX,
+      finalY,
+      finalWidth * factor,
+      finalHeight * factor
     )
   }
 
   scaleImage = e => {
     e.preventDefault()
 
-    this.factor = e.target.value / 50
+    this.imageData = { ...this.imageData, factor: e.target.value / 50 }
 
-    this.draw()
+    if (!!this.imageData.image) this.draw()
   }
 
   handleTouchStart = e => {
-    if (this.image) {
-      e.preventDefault()
+    e.preventDefault()
+
+    if (!!this.imageData.image) {
       this.setState({ dragging: true })
-      this.pos = {
-        x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-        y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+
+      this.imageData = {
+        ...this.imageData,
+        pos: {
+          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
+          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+        },
+        touchStart: {
+          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
+          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+        }
       }
-      this.touchStart = { x: this.pos.x, y: this.pos.y }
     }
   }
 
   handleTouchMove = e => {
-    if (this.state.dragging && this.image) {
-      e.preventDefault()
-      this.pos = {
-        x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-        y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+    e.preventDefault()
+
+    if (this.state.dragging && !!this.imageData.image) {
+      this.imageData = {
+        ...this.imageData,
+        pos: {
+          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
+          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+        }
       }
+
       this.draw()
     }
   }
 
   handleTouchEnd = e => {
-    if (this.image) {
-      e.preventDefault()
+    e.preventDefault()
+
+    if (!!this.imageData.image) {
       this.setState({ dragging: false })
-      this.touchEnd = { x: this.finalX, y: this.finalY }
+
+      this.imageData = {
+        ...this.imageData,
+        touchStart: { x: 0, y: 0 },
+        pos: { x: 0, y: 0 },
+        lastPos: {
+          x: this.imageData.finalX,
+          y: this.imageData.finalY
+        }
+      }
     }
   }
 
   handleMouseOut = e => {
-    if (this.image) {
-      e.preventDefault()
+    e.preventDefault()
+
+    if (!!this.imageData.image) {
       if (this.state.dragging && e.buttons === 1) {
-        this.pos = {
-          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+        this.imageData = {
+          ...this.imageData,
+          pos: {
+            x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
+            y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+          }
         }
+
         this.draw()
       } else {
         this.setState({ dragging: false })
-        this.touchEnd = { x: this.finalX, y: this.finalY }
+
+        this.imageData = {
+          ...this.imageData,
+          touchStart: { x: 0, y: 0 },
+          pos: { x: 0, y: 0 },
+          lastPos: {
+            x: this.imageData.finalX,
+            y: this.imageData.finalY
+          }
+        }
       }
     }
   }
@@ -171,6 +244,8 @@ class AvatarCropper extends Component {
           onTouchEnd={ this.handleTouchEnd }
           onMouseUp={ this.handleTouchEnd }
           style={{ pointerEvents: this.state.hasImage ? 'auto' : 'none' }}
+          width={ 500 }
+          height={ 500 }
         />
         <div className="mask" />
         <input
