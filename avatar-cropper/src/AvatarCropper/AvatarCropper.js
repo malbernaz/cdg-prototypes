@@ -20,33 +20,33 @@ class AvatarCropper extends Component {
     const img = file[0]
     const reader = new FileReader()
     const image = new Image()
-    const self = this
+    const outerThis = this
 
     image.onload = function loadImage (e) {
       const containerWidth =
-        self.refs.container.getBoundingClientRect().width
+        outerThis.refs.container.getBoundingClientRect().width
 
-      self.imageData = {
-        ...self.imageData,
+      outerThis.imageData = {
+        ...outerThis.imageData,
         initialWidth: this.width,
         initialHeight: this.height
       }
 
       if (this.width <= containerWidth) {
-        self.imageData = {
-          ...self.imageData,
+        outerThis.imageData = {
+          ...outerThis.imageData,
           finalWidth: this.width,
           finalHeight: this.height
         }
       } else {
-        self.imageData = {
-          ...self.imageData,
+        outerThis.imageData = {
+          ...outerThis.imageData,
           finalWidth: containerWidth,
           finalHeight: containerWidth * (this.height / this.width)
         }
       }
 
-      self.draw(e)
+      outerThis.draw(e)
     }
 
     reader.onload = e => { image.src = e.target.result }
@@ -71,11 +71,7 @@ class AvatarCropper extends Component {
     const context = canvas.getContext('2d')
 
     if (this.imageData.touchStart !== undefined) {
-      const {
-        touchPos,
-        touchStart,
-        touchEndCoords
-      } = this.imageData
+      const { touchPos, touchStart, touchEndCoords } = this.imageData
 
       this.imageData = {
         ...this.imageData,
@@ -139,16 +135,13 @@ class AvatarCropper extends Component {
     if (!!this.imageData.image) {
       this.setState({ dragging: true })
 
+      const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
+      const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+
       this.imageData = {
         ...this.imageData,
-        touchPos: {
-          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
-        },
-        touchStart: {
-          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
-        }
+        touchPos: { x: posX, y: posY },
+        touchStart: { x: posX, y: posY }
       }
     }
   }
@@ -157,12 +150,12 @@ class AvatarCropper extends Component {
     e.preventDefault()
 
     if (this.state.dragging && !!this.imageData.image) {
+      const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
+      const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+
       this.imageData = {
         ...this.imageData,
-        touchPos: {
-          x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-          y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
-        }
+        touchPos: { x: posX, y: posY }
       }
 
       this.draw(e)
@@ -189,12 +182,12 @@ class AvatarCropper extends Component {
 
     if (!!this.imageData.image) {
       if (this.state.dragging && e.buttons === 1) {
+        const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
+        const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+
         this.imageData = {
           ...this.imageData,
-          touchPos: {
-            x: (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft,
-            y: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
-          }
+          touchPos: { x: posX, y: posY }
         }
 
         this.draw(e)

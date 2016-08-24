@@ -6,15 +6,36 @@ class ImageCropper extends Component {
   constructor (props) {
     super(props)
 
-    this.state = {}
+    this.state = {
+      width: window.innerWidth
+    }
     this.image = null
     this.initialX = 0
     this.initialY = 0
   }
 
+  handleResize = e => {
+    this.setState({
+      height: (this.props.height / this.props.width) * window.innerWidth >= this.props.height ?
+        this.props.height : (this.props.height / this.props.width) * window.innerWidth,
+      scale: window.innerWidth >= this.props.width ?
+        1 : window.innerWidth / this.props.width
+    })
+  }
+
   componentDidMount = () => {
+    window.addEventListener('resize', this.handleResize)
     this.finalWidth = this.refs.container.getBoundingClientRect().width
-    this.setState({ height: (this.props.width / this.props.height) * this.finalWidth })
+    this.setState({
+      height: (this.props.height / this.props.width) * window.innerWidth >= this.props.height ?
+        this.props.height : (this.props.height / this.props.width) * window.innerWidth,
+      scale: window.innerWidth >= this.props.width ?
+        1 : window.innerWidth / this.props.width
+    })
+  }
+
+  componentWillUnmount = () => {
+    window.removeEventListener('resize', this.handleResize)
   }
 
   onDrop = file => {
@@ -117,29 +138,34 @@ class ImageCropper extends Component {
 
   render = ()  => {
     return (
-      <div className="ImageCropper" ref="container">
-        <Dropzone
-          className="Dropzone"
-          style={{ height: this.state.height }}
-          multiple={ false }
-          onDrop={ this.onDrop }
-        />
-        <canvas
-          ref="canvas"
-          className="ImageCropper__result"
-          onTouchStart={ this.handleTouchStart }
-          onMouseDown={ this.handleTouchStart }
-          onTouchMove={ this.handleTouchMove }
-          onMouseMove={ this.handleTouchMove }
-          onTouchEnd={ this.handleTouchEnd }
-          onMouseUp={ this.handleTouchEnd }
-          style={{
-            pointerEvents: this.state.hasImage ? 'auto' : 'none'
-          }}
-        />
-        <div className="dragIndicatorContainer">
-          { this.state.hasImage ?
-            <span className="dragIndicator"> arraste para reposicionar </span> : '' }
+      <div className="ImageCropperContainer" style={{ maxWidth: this.props.width }}>
+        <div
+          className="ImageCropper"
+          ref="container"
+          style={{ height: this.state.height, maxWidth: this.props.width }}
+        >
+          <Dropzone className="Dropzone" multiple={ false } onDrop={ this.onDrop } />
+          <canvas
+            ref="canvas"
+            className="ImageCropper__result"
+            onTouchStart={ this.handleTouchStart }
+            onMouseDown={ this.handleTouchStart }
+            onTouchMove={ this.handleTouchMove }
+            onMouseMove={ this.handleTouchMove }
+            onTouchEnd={ this.handleTouchEnd }
+            onMouseUp={ this.handleTouchEnd }
+            style={{
+              pointerEvents: this.state.hasImage ? 'auto' : 'none',
+              transform: `scale(${this.state.scale})`,
+              WebkitTransform: `scale(${this.state.scale})`,
+              width: this.props.width,
+              height: this.props.height
+            }}
+          />
+          <div className="dragIndicatorContainer" style={{ maxWidth: this.props.width }}>
+            { this.state.hasImage ?
+              <span className="dragIndicator"> arraste para reposicionar </span> : '' }
+          </div>
         </div>
         <div
           className="mouseoutTrigger"

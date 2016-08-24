@@ -8,7 +8,7 @@ class App extends Component {
     return (
       <div className="App">
         <div className="container">
-          <ImageCropper height={ 1200 } width={ 300 } />
+          <ImageCropper height={ 270 } width={ 1050 } />
         </div>
       </div>
     )
