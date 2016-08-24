@@ -6,132 +6,182 @@ class ImageCropper extends Component {
   constructor (props) {
     super(props)
 
-    this.state = {
-      width: window.innerWidth
+    this.state = {}
+    this.imageData = {
+      image: null,
+      initialX: 0,
+      initialY: 0
     }
-    this.image = null
-    this.initialX = 0
-    this.initialY = 0
+  }
+
+  componentDidMount () {
+    const { height, width } = this.props
+    const ratio = height / width
+
+    this.setState({
+      height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
+      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
+    })
+
+    window.addEventListener('resize', this.handleResize)
+  }
+
+  componentWillUnmount () {
+    window.removeEventListener('resize', this.handleResize)
   }
 
   handleResize = e => {
-    this.setState({
-      height: (this.props.height / this.props.width) * window.innerWidth >= this.props.height ?
-        this.props.height : (this.props.height / this.props.width) * window.innerWidth,
-      scale: window.innerWidth >= this.props.width ?
-        1 : window.innerWidth / this.props.width
-    })
-  }
+    const { height, width } = this.props
+    const ratio = height / width
 
-  componentDidMount = () => {
-    window.addEventListener('resize', this.handleResize)
-    this.finalWidth = this.refs.container.getBoundingClientRect().width
     this.setState({
-      height: (this.props.height / this.props.width) * window.innerWidth >= this.props.height ?
-        this.props.height : (this.props.height / this.props.width) * window.innerWidth,
-      scale: window.innerWidth >= this.props.width ?
-        1 : window.innerWidth / this.props.width
+      height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
+      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
     })
-  }
-
-  componentWillUnmount = () => {
-    window.removeEventListener('resize', this.handleResize)
   }
 
   onDrop = file => {
     if (file[0].constructor !== File) return false
+
     const img = file[0]
     const reader = new FileReader()
     const image = new Image()
+    const _this = this
 
-    image.onload = () => this.draw()
+    image.onload = function loadImage (e) {
+      const { width } = _this.props
+      const { canvas } = _this.refs
+      const finalHeight = width * (this.height / this.width)
+
+      _this.imageData = {
+        ..._this.imageData,
+        image: this,
+        initialWidth: this.width,
+        initialHeight: this.height,
+        finalWidth: width,
+        finalHeight,
+        finalX: canvas.width / 2 - width / 2,
+        finalY: (canvas.height - finalHeight) / 2
+      }
+
+      _this.setState({ hasImage: true })
+      _this.draw()
+    }
+
     reader.onload = e => { image.src = e.target.result }
     reader.readAsDataURL(img)
-
-    this.image = image
-    this.setState({ hasImage: true })
   }
 
   draw = () => {
-    if (!this.initialWidth) {
-      this.refs.canvas.width = this.finalWidth
-      this.refs.canvas.height = this.state.height
-      this.initialWidth = this.image.width
-      this.initialHeight = this.image.height
-      this.finalHeight = this.finalWidth * (this.image.height / this.image.width)
-      this.finalX = this.refs.canvas.width / 2 - this.finalWidth / 2
-    }
+    const { canvas } = this.refs
+    const context = canvas.getContext('2d')
+    const {
+      image,
+      initialX,
+      initialY,
+      initialWidth,
+      initialHeight,
+      finalWidth,
+      finalHeight,
+      finalX,
+      touchStart,
+      touchEndY,
+      posY
+    } = this.imageData
 
-    this.mod = this.touchEnd !== undefined ?
-      this.touchEnd - (this.touchStart - this.posy) :
-      (this.refs.canvas.height - this.finalHeight) / 2 - (this.touchStart - this.posy)
-
-    if (this.posy !== undefined) {
-      if (this.mod > 0) {
-        this.finalY = 0
-      } else if (this.mod < this.refs.canvas.height - this.finalHeight) {
-        this.finalY = this.refs.canvas.height - this.finalHeight
-      } else {
-        this.finalY = this.mod
+    if (touchStart !== undefined) {
+      this.imageData = {
+        ...this.imageData,
+        mod: touchEndY !== undefined ?
+          touchEndY - (touchStart - posY) :
+          (canvas.height - finalHeight) / 2 - (touchStart - posY)
       }
-    } else {
-      this.finalY = (this.refs.canvas.height - this.finalHeight) / 2
+
+      const { mod } = this.imageData
+
+      if (mod > 0) {
+        this.imageData = { ...this.imageData, finalY: 0 }
+      } else if (mod < canvas.height - finalHeight) {
+        this.imageData = { ...this.imageData, finalY: canvas.height - finalHeight }
+      } else {
+        this.imageData = { ...this.imageData, finalY: mod }
+      }
     }
 
-    this.refs.canvas.getContext('2d').clearRect(
-      0,
-      0,
-      this.refs.canvas.width,
-      this.refs.canvas.height
-    )
-    this.refs.canvas.getContext('2d').drawImage(
-      this.image,
-      this.initialX,
-      this.initialY,
-      this.initialWidth,
-      this.initialHeight,
-      this.finalX,
-      this.finalY,
-      this.finalWidth,
-      this.finalHeight
+    const { finalY } = this.imageData
+
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(
+      image,
+      initialX,
+      initialY,
+      initialWidth,
+      initialHeight,
+      finalX,
+      finalY,
+      finalWidth,
+      finalHeight
     )
   }
 
   handleTouchStart = e => {
-    if (this.image) {
+    if (this.imageData.image) {
       e.preventDefault()
+
       this.setState({ dragging: true })
-      this.posy = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
-      this.touchStart = this.posy
+
+      const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+
+      this.imageData = { ...this.imageData, posY, touchStart: posY }
+
       this.draw()
     }
   }
 
   handleTouchMove = e => {
-    if (this.state.dragging && this.image) {
+    if (this.state.dragging && this.imageData.image) {
       e.preventDefault()
-      this.posy = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+
+      this.imageData = {
+        ...this.imageData,
+        posY: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+      }
+
       this.draw()
     }
   }
 
   handleTouchEnd = e => {
-    if (this.image) {
+    if (this.imageData.image) {
       e.preventDefault()
+
       this.setState({ dragging: false })
-      this.touchEnd = this.finalY
+
+      this.imageData = {
+        ...this.imageData,
+        touchEndY: this.imageData.finalY
+      }
     }
   }
 
   handleMouseOut = e => {
-    if (this.image) {
+    if (this.imageData.image) {
       e.preventDefault()
+
       if (this.state.dragging && e.buttons === 1) {
-        this.posy = (e.touches ? e.touches[0].pageY : e.pageY) - this.refs.canvas.offsetTop
+        this.imageData = {
+          ...this.imageData,
+          posY: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+        }
+
         this.draw()
       } else {
         this.setState({ dragging: false })
-        this.touchEnd = this.finalY
+
+        this.imageData = {
+          ...this.imageData,
+          touchEndY: this.imageData.finalY
+        }
       }
     }
   }
@@ -146,14 +196,15 @@ class ImageCropper extends Component {
         >
           <Dropzone className="Dropzone" multiple={ false } onDrop={ this.onDrop } />
           <canvas
-            ref="canvas"
             className="ImageCropper__result"
-            onTouchStart={ this.handleTouchStart }
+            height={ this.props.height }
             onMouseDown={ this.handleTouchStart }
-            onTouchMove={ this.handleTouchMove }
             onMouseMove={ this.handleTouchMove }
-            onTouchEnd={ this.handleTouchEnd }
             onMouseUp={ this.handleTouchEnd }
+            onTouchEnd={ this.handleTouchEnd }
+            onTouchMove={ this.handleTouchMove }
+            onTouchStart={ this.handleTouchStart }
+            ref="canvas"
             style={{
               pointerEvents: this.state.hasImage ? 'auto' : 'none',
               transform: `scale(${this.state.scale})`,
@@ -161,6 +212,7 @@ class ImageCropper extends Component {
               width: this.props.width,
               height: this.props.height
             }}
+            width={ this.props.width }
           />
           <div className="dragIndicatorContainer" style={{ maxWidth: this.props.width }}>
             { this.state.hasImage ?
