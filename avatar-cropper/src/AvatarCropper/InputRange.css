@@ -1,0 +1,84 @@
+input[type=range].InputRange {
+  -webkit-appearance: none;
+  margin: 20px 0;
+}
+input[type=range].InputRange:focus {
+  outline: none;
+}
+input[type=range].InputRange::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 1px;
+  cursor: pointer;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  background: #484d4d;
+  border-radius: 0px;
+  border: 0px solid #010101;
+}
+input[type=range].InputRange::-webkit-slider-thumb {
+  box-shadow: 0px 0px 1px #900000, 0px 0px 0px #aa0000;
+  border: 1.3px solid #ff77a1;
+  height: 15px;
+  width: 15px;
+  border-radius: 50px;
+  background: #ffffff;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -7px;
+}
+input[type=range].InputRange:focus::-webkit-slider-runnable-track {
+  background: #484d4d;
+}
+input[type=range].InputRange::-moz-range-track {
+  width: 100%;
+  height: 1px;
+  cursor: pointer;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  background: #484d4d;
+  border-radius: 0px;
+  border: 0px solid #010101;
+}
+input[type=range].InputRange::-moz-range-thumb {
+  box-shadow: 0px 0px 1px #900000, 0px 0px 0px #aa0000;
+  border: 1.3px solid #ff77a1;
+  height: 15px;
+  width: 15px;
+  border-radius: 50px;
+  background: #ffffff;
+  cursor: pointer;
+}
+input[type=range].InputRange::-ms-track {
+  width: 100%;
+  height: 1px;
+  cursor: pointer;
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+input[type=range].InputRange::-ms-fill-lower {
+  background: #484d4d;
+  border: 0px solid #010101;
+  border-radius: 0px;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+}
+input[type=range].InputRange::-ms-fill-upper {
+  background: #484d4d;
+  border: 0px solid #010101;
+  border-radius: 0px;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+}
+input[type=range].InputRange::-ms-thumb {
+  box-shadow: 0px 0px 1px #900000, 0px 0px 0px #aa0000;
+  border: 1.3px solid #ff77a1;
+  height: 15px;
+  width: 15px;
+  border-radius: 50px;
+  background: #ffffff;
+  cursor: pointer;
+  height: 1px;
+}
+input[type=range].InputRange:focus::-ms-fill-lower {
+  background: #484d4d;
+}
+input[type=range].InputRange:focus::-ms-fill-upper {
+  background: #484d4d;
+}

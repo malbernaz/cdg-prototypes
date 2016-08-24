@@ -142,17 +142,17 @@ class AvatarCropper extends Component {
 
     const { mod: { x, y } } = this.imageData
 
-    if (x <= (canvas.width - finalWidth * factor) - 160) {
+    if (x < (canvas.width - finalWidth * factor) - 160) {
       this.modifyCoords({ x: (canvas.width - finalWidth * factor) - 160 })
-    } else if (x >= 160) {
+    } else if (x > 160) {
       this.modifyCoords({ x: 160 })
     } else {
       this.modifyCoords({ x })
     }
 
-    if (y <= (canvas.height - finalHeight * factor) - 160) {
+    if (y < (canvas.height - finalHeight * factor) - 160) {
       this.modifyCoords({ y: (canvas.height - finalHeight * factor) - 160 })
-    } else if (y >= 160) {
+    } else if (y > 160) {
       this.modifyCoords({ y: 160 })
     } else {
       this.modifyCoords({ y })
@@ -179,17 +179,17 @@ class AvatarCropper extends Component {
       if (finalHeight * factor < 180) factor = 180 / finalHeight
       if (finalWidth * factor < 180) factor = 180 / finalWidth
 
-      if (x <= (canvas.width - finalWidth * factor) - 160) {
+      if (x < (canvas.width - finalWidth * factor) - 160) {
         this.modifyCoords({ x: (canvas.width - finalWidth * factor) - 160 })
-      } else if (x >= 160) {
+      } else if (x > 160) {
         this.modifyCoords({ x: 160 })
       } else {
         this.modifyCoords({ x: x + (lastWidth - finalWidth * factor) / 2 })
       }
 
-      if (y <= (canvas.height - finalHeight * factor) - 160) {
+      if (y < (canvas.height - finalHeight * factor) - 160) {
         this.modifyCoords({ y: (canvas.height - finalHeight * factor) - 160 })
-      } else if (y >= 160) {
+      } else if (y > 160) {
         this.modifyCoords({ y: 160 })
       } else {
         this.modifyCoords({ y: y + (lastHeight - finalHeight * factor) / 2 })
