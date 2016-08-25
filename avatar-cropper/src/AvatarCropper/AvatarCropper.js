@@ -335,7 +335,7 @@ class AvatarCropper extends Component {
         <div className="mask" />
         <InputRange
           max={ 100 }
-          min={ 25 }
+          min={ 20 }
           onChange={ e => this.scaleImage(e) }
           value={ parseInt(scaleParams.value, 10) }
         />
