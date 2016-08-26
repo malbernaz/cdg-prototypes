@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import Dropzone from 'react-dropzone'
-import InputRange from './InputRange'
 import './AvatarCropper.css'
+import './InputRange.css'
 
 class AvatarCropper extends Component {
   constructor (props) {
@@ -9,17 +9,33 @@ class AvatarCropper extends Component {
 
     this.state = {
       hasImage: false,
-      scaleParams: {
-        max: 25,
-        min: 100,
-        value: 50
-      }
+      scaleValue: 50
     }
 
     this.imageData = {
       image: null,
       initialCoords: { x: 0, y: 0 },
       factor: 1
+    }
+  }
+
+  componentDidMount () {
+    this.setState({
+      scale: window.innerWidth >= 530 ? 1 : window.innerWidth / 530
+    })
+
+    window.addEventListener('resize', this.handleResize)
+  }
+
+  componentWillUnmount () {
+    window.removeEventListener('resize', this.handleResize)
+  }
+
+  handleResize = e => {
+    if (window.matchMedia(520)) {
+      this.setState({
+        scale: window.innerWidth >= 530 ? 1 : window.innerWidth / 530
+      })
     }
   }
 
@@ -205,12 +221,7 @@ class AvatarCropper extends Component {
         touchEndCoords: this.imageData.finalCoords
       }
 
-      this.setState({
-        scaleParams: {
-          ...this.state.scaleParams,
-          value: e.target.value
-        }
-      })
+      this.setState({ scaleValue: e.target.value })
 
       this.draw()
     }
@@ -309,13 +320,18 @@ class AvatarCropper extends Component {
   }
 
   render () {
-    const { scaleParams } = this.state
+    const { scaleValue, scale } = this.state
 
     return (
       <div className="AvatarCropper" ref="container">
         <Dropzone
           className="Dropzone"
-          style={{ height: 500 }}
+          style={{
+            height: 500,
+            width: 500,
+            transform: `scale(${scale}) translate(-50%)`,
+            WebkitTransform: `scale(${scale}) translate(-50%)`
+          }}
           multiple={ false }
           onDrop={ this.onDrop }
         />
@@ -328,16 +344,33 @@ class AvatarCropper extends Component {
           onMouseMove={ this.handleTouchMove }
           onTouchEnd={ this.handleTouchEnd }
           onMouseUp={ this.handleTouchEnd }
-          style={{ pointerEvents: this.state.hasImage ? 'auto' : 'none' }}
+          style={{
+            pointerEvents: this.state.hasImage ? 'auto' : 'none',
+            height: 500,
+            width: 500,
+            transform: `scale(${scale}) translate(-50%)`,
+            WebkitTransform: `scale(${scale}) translate(-50%)`
+          }}
           width={ 500 }
           height={ 500 }
         />
-        <div className="mask" />
-        <InputRange
+        <div
+          className="mask"
+          style={{
+            height: 500,
+            width: 500,
+            transform: `scale(${scale}) translate(-50%)`,
+            WebkitTransform: `scale(${scale}) translate(-50%)`
+          }}
+        />
+        <input
+          className="InputRange"
           max={ 100 }
-          min={ 20 }
+          min={ 25 }
+          value={ parseInt(scaleValue, 10) }
           onChange={ e => this.scaleImage(e) }
-          value={ parseInt(scaleParams.value, 10) }
+          style={{ transform: `translateY(-50%)` }}
+          type="range"
         />
         <div
           className="mouseoutTrigger"
