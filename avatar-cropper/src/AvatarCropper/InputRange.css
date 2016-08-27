@@ -24,9 +24,8 @@
 
   cursor: pointer;
 
-  border: 1px solid royalblue;
   border-radius: 50px;
-  background: #fff;
+  background: #69b4b1;
 
   -webkit-appearance: none;
 }
@@ -50,9 +49,8 @@
 
   cursor: pointer;
 
-  border: 1px solid royalblue;
   border-radius: 50px;
-  background: #fff;
+  background: #69b4b1;
 }
 
 .InputRange::-ms-track {
@@ -81,9 +79,8 @@
 
   cursor: pointer;
 
-  border: 1px solid royalblue;
   border-radius: 50px;
-  background: #fff;
+  background: #69b4b1;
 }
 
 .InputRange:focus::-ms-fill-lower {
