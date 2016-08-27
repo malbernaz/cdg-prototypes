@@ -10,15 +10,11 @@ class AvatarCropper extends Component {
 
     this.state = {
       hasImage: false,
-      scaleValue: 50,
+      scaleValue: 1,
       scale: window.innerWidth >= 530 ? 1 : window.innerWidth / 530
     }
 
-    this.imageData = {
-      image: null,
-      initialCoords: { x: 0, y: 0 },
-      factor: 1
-    }
+    this.drawParams = { initialCoords: { x: 0, y: 0 } }
 
     this.worker = new CompressWorker()
   }
@@ -40,59 +36,59 @@ class AvatarCropper extends Component {
     const _this = this
 
     image.onload = function loadImage () {
-      _this.imageData = {
-        ..._this.imageData,
+      _this.drawParams = {
+        ..._this.drawParams,
         image: this,
         initialWidth: this.width,
-        initialHeight: this.height
+        initialHeight: this.height,
+        ratio: this.width / this.height
       }
 
-      if (this.width >= this.height) {
-        _this.inputRange.min = Math.floor((180 / this.width) * 50)
+      _this.inputRange.min = 180
 
-        if (this.width <= 500) {
-          _this.imageData = {
-            ..._this.imageData,
-            finalWidth: this.width,
-            finalHeight: this.height
-          }
-        } else {
-          _this.imageData = {
-            ..._this.imageData,
-            finalWidth: 500,
-            finalHeight: 500 * (this.height / this.width)
-          }
+      if (this.width >= this.height && this.width <= 500) {
+        _this.inputRange.value = this.width
+
+        _this.drawParams = {
+          ..._this.drawParams,
+          finalWidth: this.width,
+          finalHeight: this.height
+        }
+      } else if (this.width >= this.height) {
+        _this.inputRange.value = 500
+
+        _this.drawParams = {
+          ..._this.drawParams,
+          finalWidth: 500,
+          finalHeight: 500 * (this.height / this.width)
+        }
+      } else if (this.height <= 500) {
+        _this.inputRange.value = this.height
+
+        _this.drawParams = {
+          ..._this.drawParams,
+          finalWidth: this.width,
+          finalHeight: this.height
         }
       } else {
-        _this.inputRange.min = Math.floor((180 / this.height) * 50)
+        _this.inputRange.value = 500
 
-        if (this.height <= 500) {
-          _this.imageData = {
-            ..._this.imageData,
-            finalWidth: this.width,
-            finalHeight: this.height
-          }
-        } else {
-          _this.imageData = {
-            ..._this.imageData,
-            finalWidth: 500 * (this.width / this.height),
-            finalHeight: 500
-          }
+        _this.drawParams = {
+          ..._this.drawParams,
+          finalWidth: 500 * (this.width / this.height),
+          finalHeight: 500
         }
       }
 
+      _this.inputRange.min = 180
+      _this.inputRange.max = _this.inputRange.value * 2
+
       _this.modifyCoords({
-        x: (_this.canvas.width - _this.imageData.finalWidth) / 2,
-        y: (_this.canvas.height - _this.imageData.finalHeight) / 2
+        x: (_this.canvas.width - _this.drawParams.finalWidth) / 2,
+        y: (_this.canvas.height - _this.drawParams.finalHeight) / 2
       })
 
-      _this.imageData = {
-        ..._this.imageData,
-        lastWidth: _this.imageData.finalWidth,
-        lastHeight: _this.imageData.finalHeight
-      }
-
-      _this.setState({ hasImage: true })
+      _this.setState({ hasImage: true, scaleValue: _this.inputRange.value })
       _this.draw()
     }
 
@@ -102,9 +98,7 @@ class AvatarCropper extends Component {
 
   handleResize = () => {
     if (window.matchMedia(530)) {
-      this.setState({
-        scale: window.innerWidth >= 530 ? 1 : window.innerWidth / 530
-      })
+      this.setState({ scale: window.innerWidth >= 530 ? 1 : window.innerWidth / 530 })
     }
   }
 
@@ -117,9 +111,8 @@ class AvatarCropper extends Component {
       initialHeight,
       finalWidth,
       finalHeight,
-      finalCoords,
-      factor
-    } = this.imageData
+      finalCoords
+    } = this.drawParams
 
     context.clearRect(0, 0, this.canvas.width, this.canvas.height)
     context.drawImage(
@@ -130,8 +123,8 @@ class AvatarCropper extends Component {
       initialHeight,
       finalCoords.x,
       finalCoords.y,
-      finalWidth * factor,
-      finalHeight * factor
+      finalWidth,
+      finalHeight
     )
   }
 
@@ -139,32 +132,31 @@ class AvatarCropper extends Component {
     const {
       finalWidth,
       finalHeight,
-      factor,
       touchPos,
       touchStart,
       touchEndCoords
-    } = this.imageData
+    } = this.drawParams
 
-    this.imageData = {
-      ...this.imageData,
+    this.drawParams = {
+      ...this.drawParams,
       mod: {
         x: Math.round(touchEndCoords.x - (touchStart.x - touchPos.x)),
         y: Math.round(touchEndCoords.y - (touchStart.y - touchPos.y))
       }
     }
 
-    const { mod: { x, y } } = this.imageData
+    const { mod: { x, y } } = this.drawParams
 
-    if (x < (this.canvas.width - finalWidth * factor) - 160) {
-      this.modifyCoords({ x: (this.canvas.width - finalWidth * factor) - 160 })
+    if (x < (this.canvas.width - finalWidth) - 160) {
+      this.modifyCoords({ x: (this.canvas.width - finalWidth) - 160 })
     } else if (x > 160) {
       this.modifyCoords({ x: 160 })
     } else {
       this.modifyCoords({ x })
     }
 
-    if (y < (this.canvas.height - finalHeight * factor) - 160) {
-      this.modifyCoords({ y: (this.canvas.height - finalHeight * factor) - 160 })
+    if (y < (this.canvas.height - finalHeight) - 160) {
+      this.modifyCoords({ y: (this.canvas.height - finalHeight) - 160 })
     } else if (y > 160) {
       this.modifyCoords({ y: 160 })
     } else {
@@ -177,60 +169,48 @@ class AvatarCropper extends Component {
   scaleImage = e => {
     e.preventDefault()
 
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       const { inputRange: { max, min }, canvas } = this
       const { scaleValue } = this.state
       const {
         finalCoords: { x, y },
         finalWidth,
-        finalHeight,
-        lastWidth,
-        lastHeight
-      } = this.imageData
+        finalHeight
+      } = this.drawParams
 
-      if (e.type === 'wheel') {
-        if (e.deltaY > 1) {
-          this.setState({
-            scaleValue: scaleValue + 2 <= max ? scaleValue + 2 : scaleValue
-          })
-        } else {
-          this.setState({
-            scaleValue: scaleValue - 2 >= min ? scaleValue - 2 : scaleValue
-          })
-        }
+      if (e.type === 'wheel' && e.deltaY > 1) {
+        this.setState({ scaleValue: scaleValue + 2 <= max ? scaleValue + 2 : scaleValue })
+      } else if (e.type === 'wheel' && e.deltaY < 1) {
+        this.setState({ scaleValue: scaleValue - 2 >= min ? scaleValue - 2 : scaleValue })
       } else {
         this.setState({ scaleValue: e.target.value })
       }
 
-      let factor = this.state.scaleValue / 50
+      const nextWidth = parseInt(this.state.scaleValue, 10)
 
-      if (finalHeight * factor < 180) factor = 180 / finalHeight
-      if (finalWidth * factor < 180) factor = 180 / finalWidth
-
-      if (x < (canvas.width - finalWidth * factor) - 160) {
-        this.modifyCoords({ x: (canvas.width - finalWidth * factor) - 160 })
+      if (x < (canvas.width - nextWidth) - 160) {
+        this.modifyCoords({ x: (canvas.width - nextWidth) - 160 })
       } else if (x > 160) {
         this.modifyCoords({ x: 160 })
       } else {
-        this.modifyCoords({ x: x + (lastWidth - finalWidth * factor) / 2 })
+        this.modifyCoords({ x: x + (finalWidth - nextWidth) / 2 })
       }
 
-      if (y < (canvas.height - finalHeight * factor) - 160) {
-        this.modifyCoords({ y: (canvas.height - finalHeight * factor) - 160 })
+      if (y < (canvas.height - nextWidth) - 160) {
+        this.modifyCoords({ y: (canvas.height - nextWidth) - 160 })
       } else if (y > 160) {
         this.modifyCoords({ y: 160 })
       } else {
-        this.modifyCoords({ y: y + (lastHeight - finalHeight * factor) / 2 })
+        this.modifyCoords({ y: y + (finalHeight - nextWidth * this.drawParams.ratio) / 2 })
       }
 
-      this.imageData = {
-        ...this.imageData,
-        factor,
+      this.drawParams = {
+        ...this.drawParams,
         touchStart: { x: 0, y: 0 },
         touchPos: { x: 0, y: 0 },
-        lastWidth: finalWidth * factor,
-        lastHeight: finalHeight * factor,
-        touchEndCoords: this.imageData.finalCoords
+        finalWidth: nextWidth,
+        finalHeight: nextWidth * this.drawParams.ratio,
+        touchEndCoords: this.drawParams.finalCoords
       }
 
       this.draw()
@@ -238,18 +218,18 @@ class AvatarCropper extends Component {
   }
 
   modifyCoords = nextCoords => {
-    this.imageData = {
-      ...this.imageData,
+    this.drawParams = {
+      ...this.drawParams,
       finalCoords: {
-        ...this.imageData.finalCoords,
+        ...this.drawParams.finalCoords,
         ...nextCoords
       }
     }
 
-    if (!this.imageData.touchEndCoords) {
-      this.imageData = {
-        ...this.imageData,
-        touchEndCoords: this.imageData.finalCoords
+    if (!this.drawParams.touchEndCoords) {
+      this.drawParams = {
+        ...this.drawParams,
+        touchEndCoords: this.drawParams.finalCoords
       }
     }
   }
@@ -274,14 +254,14 @@ class AvatarCropper extends Component {
   handleTouchStart = e => {
     e.preventDefault()
 
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       this.setState({ dragging: true })
 
       const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
       const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
 
-      this.imageData = {
-        ...this.imageData,
+      this.drawParams = {
+        ...this.drawParams,
         touchPos: { x: posX, y: posY },
         touchStart: { x: posX, y: posY }
       }
@@ -291,12 +271,12 @@ class AvatarCropper extends Component {
   handleTouchMove = e => {
     e.preventDefault()
 
-    if (this.state.dragging && this.imageData.image) {
+    if (this.state.dragging && this.drawParams.image) {
       const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
       const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
 
-      this.imageData = {
-        ...this.imageData,
+      this.drawParams = {
+        ...this.drawParams,
         touchPos: { x: posX, y: posY }
       }
 
@@ -307,14 +287,14 @@ class AvatarCropper extends Component {
   handleTouchEnd = e => {
     e.preventDefault()
 
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       this.setState({ dragging: false })
 
-      this.imageData = {
-        ...this.imageData,
+      this.drawParams = {
+        ...this.drawParams,
         touchStart: { x: 0, y: 0 },
         touchPos: { x: 0, y: 0 },
-        touchEndCoords: this.imageData.finalCoords
+        touchEndCoords: this.drawParams.finalCoords
       }
     }
   }
@@ -322,13 +302,13 @@ class AvatarCropper extends Component {
   handleMouseOut = e => {
     e.preventDefault()
 
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       if (this.state.dragging && e.buttons === 1) {
         const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
         const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
 
-        this.imageData = {
-          ...this.imageData,
+        this.drawParams = {
+          ...this.drawParams,
           touchPos: { x: posX, y: posY }
         }
 
@@ -336,11 +316,11 @@ class AvatarCropper extends Component {
       } else {
         this.setState({ dragging: false })
 
-        this.imageData = {
-          ...this.imageData,
+        this.drawParams = {
+          ...this.drawParams,
           touchStart: { x: 0, y: 0 },
           touchPos: { x: 0, y: 0 },
-          touchEndCoords: this.imageData.finalCoords
+          touchEndCoords: this.drawParams.finalCoords
         }
       }
     }
