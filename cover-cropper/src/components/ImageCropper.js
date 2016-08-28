@@ -1,67 +1,57 @@
 import React, { Component, PropTypes } from 'react'
 import Dropzone from 'react-dropzone'
+import CompressWorker from 'worker?inline!./CompressWorker.js'
 import './ImageCropper.css'
 
 class ImageCropper extends Component {
   constructor (props) {
     super(props)
 
-    this.state = {}
-    this.imageData = {
+    const { height, width } = props
+    const ratio = height / width
+
+    this.state = {
+      height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
+      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
+    }
+    this.drawParams = {
       image: null,
       initialX: 0,
       initialY: 0
     }
+
+    this.worker = new CompressWorker()
   }
 
   componentDidMount () {
-    const { height, width } = this.props
-    const ratio = height / width
-
-    this.setState({
-      height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
-      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
-    })
-
     window.addEventListener('resize', this.handleResize)
+    this.worker.addEventListener('message', this.receiveCompressedImage)
   }
 
   componentWillUnmount () {
     window.removeEventListener('resize', this.handleResize)
-  }
-
-  handleResize = e => {
-    const { height, width } = this.props
-    const ratio = height / width
-
-    this.setState({
-      height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
-      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
-    })
+    this.worker.removeEventListener('message', this.receiveCompressedImage)
   }
 
   onDrop = file => {
-    if (file[0].constructor !== File) return false
-
     const img = file[0]
     const reader = new FileReader()
     const image = new Image()
     const _this = this
 
-    image.onload = function loadImage (e) {
+    image.onload = function loadImage () {
       const { width } = _this.props
-      const { canvas } = _this.refs
       const finalHeight = width * (this.height / this.width)
 
-      _this.imageData = {
-        ..._this.imageData,
+      _this.drawParams = {
+        ..._this.drawParams,
         image: this,
         initialWidth: this.width,
         initialHeight: this.height,
         finalWidth: width,
         finalHeight,
-        finalX: canvas.width / 2 - width / 2,
-        finalY: (canvas.height - finalHeight) / 2
+        finalX: _this.canvas.width / 2 - width / 2,
+        finalY: (_this.canvas.height - finalHeight) / 2
       }
 
       _this.setState({ hasImage: true })
@@ -72,9 +62,18 @@ class ImageCropper extends Component {
     reader.readAsDataURL(img)
   }
 
+  handleResize = () => {
+    const { height, width } = this.props
+    const ratio = height / width
+
+    this.setState({
+      height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
+      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
+    })
+  }
+
   draw = () => {
-    const { canvas } = this.refs
-    const context = canvas.getContext('2d')
+    const context = this.canvas.getContext('2d')
     const {
       image,
       initialX,
@@ -87,30 +86,30 @@ class ImageCropper extends Component {
       touchStart,
       touchEndY,
       posY
-    } = this.imageData
+    } = this.drawParams
 
     if (touchStart !== undefined) {
-      this.imageData = {
-        ...this.imageData,
+      this.drawParams = {
+        ...this.drawParams,
         mod: touchEndY !== undefined ?
           touchEndY - (touchStart - posY) :
-          (canvas.height - finalHeight) / 2 - (touchStart - posY)
+          (this.canvas.height - finalHeight) / 2 - (touchStart - posY)
       }
 
-      const { mod } = this.imageData
+      const { mod } = this.drawParams
 
       if (mod > 0) {
-        this.imageData = { ...this.imageData, finalY: 0 }
-      } else if (mod < canvas.height - finalHeight) {
-        this.imageData = { ...this.imageData, finalY: canvas.height - finalHeight }
+        this.drawParams = { ...this.drawParams, finalY: 0 }
+      } else if (mod < this.canvas.height - finalHeight) {
+        this.drawParams = { ...this.drawParams, finalY: this.canvas.height - finalHeight }
       } else {
-        this.imageData = { ...this.imageData, finalY: mod }
+        this.drawParams = { ...this.drawParams, finalY: mod }
       }
     }
 
-    const { finalY } = this.imageData
+    const { finalY } = this.drawParams
 
-    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.clearRect(0, 0, this.canvas.width, this.canvas.height)
     context.drawImage(
       image,
       initialX,
@@ -124,26 +123,43 @@ class ImageCropper extends Component {
     )
   }
 
+  handleSave = e => {
+    e.preventDefault()
+
+    const context = this.canvas.getContext('2d')
+    const imageData = context.getImageData(0, 0, this.canvas.width, this.canvas.height)
+
+    this.worker.postMessage({ imageData, quality: 50 })
+  }
+
+  receiveCompressedImage = e => {
+    const blob = new Blob([e.data.data], { type: 'image/jpeg' })
+
+    this.downloader.href = window.URL.createObjectURL(blob)
+    this.downloader.download = 'compressed.jpg'
+    this.downloader.click()
+  }
+
   handleTouchStart = e => {
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       e.preventDefault()
 
       this.setState({ dragging: true })
 
       const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
 
-      this.imageData = { ...this.imageData, posY, touchStart: posY }
+      this.drawParams = { ...this.drawParams, posY, touchStart: posY }
 
       this.draw()
     }
   }
 
   handleTouchMove = e => {
-    if (this.state.dragging && this.imageData.image) {
+    if (this.state.dragging && this.drawParams.image) {
       e.preventDefault()
 
-      this.imageData = {
-        ...this.imageData,
+      this.drawParams = {
+        ...this.drawParams,
         posY: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
       }
 
@@ -152,25 +168,25 @@ class ImageCropper extends Component {
   }
 
   handleTouchEnd = e => {
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       e.preventDefault()
 
       this.setState({ dragging: false })
 
-      this.imageData = {
-        ...this.imageData,
-        touchEndY: this.imageData.finalY
+      this.drawParams = {
+        ...this.drawParams,
+        touchEndY: this.drawParams.finalY
       }
     }
   }
 
   handleMouseOut = e => {
-    if (this.imageData.image) {
+    if (this.drawParams.image) {
       e.preventDefault()
 
       if (this.state.dragging && e.buttons === 1) {
-        this.imageData = {
-          ...this.imageData,
+        this.drawParams = {
+          ...this.drawParams,
           posY: (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
         }
 
@@ -178,20 +194,19 @@ class ImageCropper extends Component {
       } else {
         this.setState({ dragging: false })
 
-        this.imageData = {
-          ...this.imageData,
-          touchEndY: this.imageData.finalY
+        this.drawParams = {
+          ...this.drawParams,
+          touchEndY: this.drawParams.finalY
         }
       }
     }
   }
 
-  render = ()  => {
+  render () {
     return (
       <div className="ImageCropperContainer" style={{ maxWidth: this.props.width }}>
         <div
           className="ImageCropper"
-          ref="container"
           style={{ height: this.state.height, maxWidth: this.props.width }}
         >
           <Dropzone className="Dropzone" multiple={ false } onDrop={ this.onDrop } />
@@ -204,7 +219,7 @@ class ImageCropper extends Component {
             onTouchEnd={ this.handleTouchEnd }
             onTouchMove={ this.handleTouchMove }
             onTouchStart={ this.handleTouchStart }
-            ref="canvas"
+            ref={ c => { this.canvas = c } }
             style={{
               pointerEvents: this.state.hasImage ? 'auto' : 'none',
               transform: `scale(${this.state.scale})`,
@@ -218,12 +233,14 @@ class ImageCropper extends Component {
             { this.state.hasImage ?
               <span className="dragIndicator"> arraste para reposicionar </span> : '' }
           </div>
+          <button onClick={ this.handleSave } className="saveButton">save image</button>
         </div>
         <div
           className="mouseoutTrigger"
           onMouseMove={ this.handleMouseOut }
           style={{ pointerEvents: this.image && this.state.dragging ? 'auto' : 'none' }}
         />
+        <a ref={ c => { this.downloader = c } } style={{ display: 'none' }} />
       </div>
     )
   }
