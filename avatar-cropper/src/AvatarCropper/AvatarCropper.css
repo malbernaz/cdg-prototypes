@@ -67,10 +67,9 @@
 
 .inputGroup {
   position: absolute;
-  top: 510px;
-  transform: translateX(-50%);
+  top: 0;
   left: 50%;
-  padding-bottom: 20px;
+  padding: 10px 0 20px;
 }
 
 .saveButton {

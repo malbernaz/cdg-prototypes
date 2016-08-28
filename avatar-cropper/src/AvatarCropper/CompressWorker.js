@@ -1,4 +1,4 @@
-/* eslint-disable no-mixed-operators, max-len, no-shadow, no-empty, no-console */
+/* eslint-disable max-len, no-shadow, no-empty, no-console */
 
 /*
   Copyright (c) 2008, Adobe Systems Incorporated
@@ -25,10 +25,6 @@
   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-/*
-JPEG encoder ported to JavaScript and optimized by Andreas Ritter, www.bytestrom.eu, 11/2009
-Basic GUI blocking jpeg encoder
 */
 
 function JPEGEncoder (quality) {

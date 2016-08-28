@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Dropzone from 'react-dropzone'
+
 import CompressWorker from 'worker?inline!./CompressWorker.js'
 import './AvatarCropper.css'
 import './InputRange.css'
@@ -8,15 +9,17 @@ class AvatarCropper extends Component {
   constructor (props) {
     super(props)
 
+    this.drawParams = {
+      image: false,
+      initialCoords: { x: 0, y: 0 }
+    }
+    this.worker = new CompressWorker()
+
     this.state = {
       hasImage: false,
-      scaleValue: 1,
+      scaleValue: 250,
       scale: window.innerWidth >= 530 ? 1 : window.innerWidth / 530
     }
-
-    this.drawParams = { initialCoords: { x: 0, y: 0 } }
-
-    this.worker = new CompressWorker()
   }
 
   componentDidMount () {
@@ -44,10 +47,9 @@ class AvatarCropper extends Component {
         ratio: this.width / this.height
       }
 
-      _this.inputRange.min = 180
-
       if (this.width >= this.height && this.width <= 500) {
-        _this.inputRange.value = this.width
+        _this.inputRange.max = this.width * 2
+        _this.setState({ hasImage: true, scaleValue: parseInt(this.width, 10) })
 
         _this.drawParams = {
           ..._this.drawParams,
@@ -55,7 +57,8 @@ class AvatarCropper extends Component {
           finalHeight: this.height
         }
       } else if (this.width >= this.height) {
-        _this.inputRange.value = 500
+        _this.inputRange.max = 1000
+        _this.setState({ hasImage: true, scaleValue: 500 })
 
         _this.drawParams = {
           ..._this.drawParams,
@@ -63,7 +66,8 @@ class AvatarCropper extends Component {
           finalHeight: 500 * (this.height / this.width)
         }
       } else if (this.height <= 500) {
-        _this.inputRange.value = this.height
+        _this.inputRange.max = this.height * 2
+        _this.setState({ hasImage: true, scaleValue: parseInt(this.height, 10) })
 
         _this.drawParams = {
           ..._this.drawParams,
@@ -71,7 +75,8 @@ class AvatarCropper extends Component {
           finalHeight: this.height
         }
       } else {
-        _this.inputRange.value = 500
+        _this.inputRange.max = 1000
+        _this.setState({ hasImage: true, scaleValue: 500 })
 
         _this.drawParams = {
           ..._this.drawParams,
@@ -80,15 +85,11 @@ class AvatarCropper extends Component {
         }
       }
 
-      _this.inputRange.min = 180
-      _this.inputRange.max = _this.inputRange.value * 2
-
       _this.modifyCoords({
         x: (_this.canvas.width - _this.drawParams.finalWidth) / 2,
         y: (_this.canvas.height - _this.drawParams.finalHeight) / 2
       })
 
-      _this.setState({ hasImage: true, scaleValue: _this.inputRange.value })
       _this.draw()
     }
 
@@ -170,34 +171,31 @@ class AvatarCropper extends Component {
     e.preventDefault()
 
     if (this.drawParams.image) {
-      const { inputRange: { max, min }, canvas } = this
+      const { max, min } = this.inputRange
       const { scaleValue } = this.state
-      const {
-        finalCoords: { x, y },
-        finalWidth,
-        finalHeight
-      } = this.drawParams
+      const { finalCoords: { x, y }, finalWidth, finalHeight } = this.drawParams
 
+      let nextWidth
       if (e.type === 'wheel' && e.deltaY > 1) {
-        this.setState({ scaleValue: scaleValue + 2 <= max ? scaleValue + 2 : scaleValue })
+        nextWidth = scaleValue + 3 < max ? scaleValue + 3 : max
       } else if (e.type === 'wheel' && e.deltaY < 1) {
-        this.setState({ scaleValue: scaleValue - 2 >= min ? scaleValue - 2 : scaleValue })
+        nextWidth = scaleValue - 3 > min ? scaleValue - 3 : min
       } else {
-        this.setState({ scaleValue: e.target.value })
+        nextWidth = e.target.value
       }
 
-      const nextWidth = parseInt(this.state.scaleValue, 10)
+      this.setState({ scaleValue: parseInt(nextWidth, 10) })
 
-      if (x < (canvas.width - nextWidth) - 160) {
-        this.modifyCoords({ x: (canvas.width - nextWidth) - 160 })
+      if (x < (this.canvas.width - nextWidth) - 160) {
+        this.modifyCoords({ x: (this.canvas.width - nextWidth) - 160 })
       } else if (x > 160) {
         this.modifyCoords({ x: 160 })
       } else {
         this.modifyCoords({ x: x + (finalWidth - nextWidth) / 2 })
       }
 
-      if (y < (canvas.height - nextWidth) - 160) {
-        this.modifyCoords({ y: (canvas.height - nextWidth) - 160 })
+      if (y < (this.canvas.height - nextWidth) - 160) {
+        this.modifyCoords({ y: (this.canvas.height - nextWidth) - 160 })
       } else if (y > 160) {
         this.modifyCoords({ y: 160 })
       } else {
@@ -327,38 +325,36 @@ class AvatarCropper extends Component {
   }
 
   render () {
-    const { scaleValue, scale } = this.state
+    const { scale } = this.state
 
     return (
       <div className="AvatarCropper" ref={ c => { this.container = c } }>
         <Dropzone
           className="Dropzone"
+          multiple={ false }
+          onDrop={ this.onDrop }
           style={{
             transform: `scale(${scale}) translate(-50%)`,
             WebkitTransform: `scale(${scale}) translate(-50%)`
           }}
-          multiple={ false }
-          onDrop={ this.onDrop }
-        >
-          { this.children }
-        </Dropzone>
+        />
         <canvas
-          ref={ c => { this.canvas = c } }
           className="canvas"
-          onTouchStart={ this.handleTouchStart }
+          height={ 500 }
           onMouseDown={ this.handleTouchStart }
-          onTouchMove={ this.handleTouchMove }
           onMouseMove={ this.handleTouchMove }
-          onTouchEnd={ this.handleTouchEnd }
           onMouseUp={ this.handleTouchEnd }
+          onTouchEnd={ this.handleTouchEnd }
+          onTouchMove={ this.handleTouchMove }
+          onTouchStart={ this.handleTouchStart }
           onWheel={ this.scaleImage }
+          ref={ c => { this.canvas = c } }
           style={{
             pointerEvents: this.state.hasImage ? 'auto' : 'none',
             transform: `scale(${scale}) translate(-50%)`,
             WebkitTransform: `scale(${scale}) translate(-50%)`
           }}
           width={ 500 }
-          height={ 500 }
         />
         <div
           className="mask"
@@ -367,16 +363,21 @@ class AvatarCropper extends Component {
             WebkitTransform: `scale(${scale}) translate(-50%)`
           }}
         />
-        <div className="inputGroup">
+        <div
+          className="inputGroup"
+          style={{
+            transform: `translateX(-50%) translateY(${500 * scale}px)`,
+            WebkitTransform: `translateX(-50%) translateY(${500 * scale}px)`
+          }}
+        >
           <input
             className="InputRange"
-            max={ 100 }
-            min={ 25 }
-            value={ parseInt(scaleValue, 10) }
+            max={ 500 }
+            min={ 180 }
             onChange={ e => this.scaleImage(e) }
             ref={ c => { this.inputRange = c } }
-            style={{ transform: 'translateY(-50%)' }}
             type="range"
+            value={ this.state.scaleValue }
           />
           <button
             className="saveButton"
