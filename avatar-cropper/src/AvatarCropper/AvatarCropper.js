@@ -13,6 +13,7 @@ class AvatarCropper extends Component {
       image: false,
       initialCoords: { x: 0, y: 0 }
     }
+
     this.worker = new CompressWorker()
 
     this.state = {
@@ -115,7 +116,8 @@ class AvatarCropper extends Component {
       finalCoords
     } = this.drawParams
 
-    context.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    context.fillStyle = '#FFFFFF'
+    context.fillRect(0, 0, this.canvas.width, this.canvas.height)
     context.drawImage(
       image,
       initialCoords.x,

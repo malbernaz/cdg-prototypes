@@ -1,9 +1,9 @@
 import React, { Component, PropTypes } from 'react'
 import Dropzone from 'react-dropzone'
 import CompressWorker from 'worker?inline!./CompressWorker.js'
-import './ImageCropper.css'
+import './CoverCropper.css'
 
-class ImageCropper extends Component {
+class CoverCropper extends Component {
   constructor (props) {
     super(props)
 
@@ -15,7 +15,7 @@ class ImageCropper extends Component {
       scale: window.innerWidth >= width ? 1 : window.innerWidth / width
     }
     this.drawParams = {
-      image: null,
+      image: false,
       initialX: 0,
       initialY: 0
     }
@@ -109,7 +109,8 @@ class ImageCropper extends Component {
 
     const { finalY } = this.drawParams
 
-    context.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    context.fillStyle = '#FFFFFF'
+    context.fillRect(0, 0, this.canvas.width, this.canvas.height)
     context.drawImage(
       image,
       initialX,
@@ -204,14 +205,14 @@ class ImageCropper extends Component {
 
   render () {
     return (
-      <div className="ImageCropperContainer" style={{ maxWidth: this.props.width }}>
+      <div className="CoverCropperContainer" style={{ maxWidth: this.props.width }}>
         <div
-          className="ImageCropper"
+          className="CoverCropper"
           style={{ height: this.state.height, maxWidth: this.props.width }}
         >
           <Dropzone className="Dropzone" multiple={ false } onDrop={ this.onDrop } />
           <canvas
-            className="ImageCropper__result"
+            className="CoverCropper__result"
             height={ this.props.height }
             onMouseDown={ this.handleTouchStart }
             onMouseMove={ this.handleTouchMove }
@@ -246,9 +247,9 @@ class ImageCropper extends Component {
   }
 }
 
-ImageCropper.propTypes = {
+CoverCropper.propTypes = {
   width: PropTypes.number,
   height: PropTypes.number
 }
 
-export default ImageCropper
+export default CoverCropper
