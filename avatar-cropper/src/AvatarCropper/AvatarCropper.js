@@ -16,7 +16,9 @@ class AvatarCropper extends Component {
 
     this.drawParams = {
       image: false,
-      initialCoords: { x: 0, y: 0 }
+      initialCoords: { x: 0, y: 0 },
+      marginX: (500 - props.width) / 2,
+      marginY: (500 - props.height) / 2
     }
 
     this.worker = new CompressWorker()
@@ -50,9 +52,7 @@ class AvatarCropper extends Component {
         image: this,
         initialWidth: this.width,
         initialHeight: this.height,
-        ratio: this.width >= this.height ?
-          this.height / this.width :
-          this.width / this.height
+        ratio: this.width / this.height
       }
 
       if (this.width >= this.height && this.width <= 500) {
@@ -144,10 +144,10 @@ class AvatarCropper extends Component {
       finalHeight,
       touchPos,
       touchStart,
-      touchEndCoords
+      touchEndCoords,
+      marginX,
+      marginY
     } = this.drawParams
-
-    const { width, height } = this.props
 
     this.drawParams = {
       ...this.drawParams,
@@ -159,18 +159,18 @@ class AvatarCropper extends Component {
 
     const { mod: { x, y } } = this.drawParams
 
-    if (x < (this.canvas.width - finalWidth) - (500 - width) / 2) {
-      this.modifyCoords({ x: (this.canvas.width - finalWidth) - (500 - width) / 2 })
-    } else if (x > (500 - width) / 2) {
-      this.modifyCoords({ x: (500 - width) / 2 })
+    if (x < (this.canvas.width - finalWidth) - marginX) {
+      this.modifyCoords({ x: (this.canvas.width - finalWidth) - marginX })
+    } else if (x > marginX) {
+      this.modifyCoords({ x: marginX })
     } else {
       this.modifyCoords({ x })
     }
 
-    if (y < (this.canvas.height - finalHeight) - (500 - height) / 2) {
-      this.modifyCoords({ y: (this.canvas.height - finalHeight) - (500 - height) / 2 })
-    } else if (y > (500 - height) / 2) {
-      this.modifyCoords({ y: (500 - height) / 2 })
+    if (y < (this.canvas.height - finalHeight) - marginY) {
+      this.modifyCoords({ y: (this.canvas.height - finalHeight) - marginY })
+    } else if (y > marginY) {
+      this.modifyCoords({ y: marginY })
     } else {
       this.modifyCoords({ y })
     }
@@ -184,42 +184,49 @@ class AvatarCropper extends Component {
     if (this.drawParams.image) {
       const { max, min } = this.inputRange
       const { scaleValue } = this.state
-      const { finalCoords: { x, y }, finalWidth, finalHeight } = this.drawParams
+      const {
+        finalCoords: { x, y },
+        finalWidth,
+        finalHeight,
+        marginX,
+        marginY,
+        ratio
+      } = this.drawParams
       const { width, height } = this.props
 
-      let nextWidth
+      let nextMeasure
       if (e.type === 'wheel' && e.deltaY > 1) {
-        nextWidth = scaleValue + 3 < max ? scaleValue + 3 : max
+        nextMeasure = scaleValue + 3 < max ? scaleValue + 3 : max
       } else if (e.type === 'wheel' && e.deltaY < 1) {
-        nextWidth = scaleValue - 3 > min ? scaleValue - 3 : min
+        nextMeasure = scaleValue - 3 > min ? scaleValue - 3 : min
       } else {
-        nextWidth = e.target.value
+        nextMeasure = e.target.value
       }
 
-      this.setState({ scaleValue: parseInt(nextWidth, 10) })
+      this.setState({ scaleValue: parseInt(nextMeasure, 10) })
 
-      if (x < (this.canvas.width - nextWidth) - (500 - width) / 2) {
-        this.modifyCoords({ x: (this.canvas.width - nextWidth) - (500 - width) / 2 })
-      } else if (x > (500 - width) / 2) {
-        this.modifyCoords({ x: (500 - width) / 2 })
+      if (x < (this.canvas.width - nextMeasure) - marginX) {
+        this.modifyCoords({ x: (this.canvas.width - nextMeasure) - marginX })
+      } else if (x > marginX) {
+        this.modifyCoords({ x: marginX })
       } else {
-        this.modifyCoords({ x: x + (finalWidth - nextWidth) / 2 })
+        this.modifyCoords({ x: x + (finalWidth - nextMeasure) / 2 })
       }
 
-      if (y < (this.canvas.height - nextWidth) - (500 - height) / 2) {
-        this.modifyCoords({ y: (this.canvas.height - nextWidth) - (500 - height) / 2 })
-      } else if (y > (500 - height) / 2) {
-        this.modifyCoords({ y: (500 - height) / 2 })
+      if (y < (this.canvas.height - nextMeasure) - marginY) {
+        this.modifyCoords({ y: (this.canvas.height - nextMeasure) - marginY })
+      } else if (y > marginY) {
+        this.modifyCoords({ y: marginY })
       } else {
-        this.modifyCoords({ y: y + (finalHeight - nextWidth * this.drawParams.ratio) / 2 })
+        this.modifyCoords({ y: y + (finalHeight - nextMeasure * ratio) / 2 })
       }
 
       this.drawParams = {
         ...this.drawParams,
         touchStart: { x: 0, y: 0 },
         touchPos: { x: 0, y: 0 },
-        finalWidth: nextWidth,
-        finalHeight: nextWidth * this.drawParams.ratio,
+        finalWidth: width >= height ? nextMeasure * ratio : nextMeasure,
+        finalHeight: width >= height ? nextMeasure : nextMeasure * ratio,
         touchEndCoords: this.drawParams.finalCoords
       }
 
@@ -337,8 +344,9 @@ class AvatarCropper extends Component {
   }
 
   render () {
-    const { width, height } = this.props
+    const { marginX, marginY } = this.drawParams
     const { scale } = this.state
+    const { width, height } = this.props
 
     return (
       <div className="AvatarCropper" ref={ c => { this.container = c } }>
@@ -372,11 +380,10 @@ class AvatarCropper extends Component {
         <div
           className="mask"
           style={{
-            borderTop: `${(500 - height) / 2}px solid rgba(252, 248, 240, .8)`,
-            borderLeft: `${(500 - width) / 2}px solid rgba(252, 248, 240, .8)`,
-            borderBottom: `${(500 - height) / 2}px solid rgba(252, 248, 240, .8)`,
-            borderRight: `${(500 - width) / 2}px solid rgba(252, 248, 240, .8)`,
-            boxShadow: '0 0 0 1px #d6d1c8, inset 0 0 0 1px #d6d1c8',
+            borderTop: `${marginY}px solid rgba(252, 248, 240, .8)`,
+            borderLeft: `${marginX}px solid rgba(252, 248, 240, .8)`,
+            borderBottom: `${marginY}px solid rgba(252, 248, 240, .8)`,
+            borderRight: `${marginX}px solid rgba(252, 248, 240, .8)`,
             transform: `scale(${scale}) translate(-50%)`,
             WebkitTransform: `scale(${scale}) translate(-50%)`
           }}
@@ -391,7 +398,7 @@ class AvatarCropper extends Component {
           <input
             className="InputRange"
             max={ 500 }
-            min={ 180 }
+            min={ width <= height ? width : height }
             onChange={ e => this.scaleImage(e) }
             ref={ c => { this.inputRange = c } }
             type="range"
