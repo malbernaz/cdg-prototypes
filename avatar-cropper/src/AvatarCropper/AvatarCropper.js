@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, PropTypes } from 'react'
 import Dropzone from 'react-dropzone'
 
 import CompressWorker from 'worker?inline!./CompressWorker.js'
@@ -6,6 +6,11 @@ import './AvatarCropper.css'
 import './InputRange.css'
 
 class AvatarCropper extends Component {
+  static propTypes = {
+    width: PropTypes.number.isRequired,
+    height: PropTypes.number.isRequired
+  }
+
   constructor (props) {
     super(props)
 
@@ -45,7 +50,9 @@ class AvatarCropper extends Component {
         image: this,
         initialWidth: this.width,
         initialHeight: this.height,
-        ratio: this.width / this.height
+        ratio: this.width >= this.height ?
+          this.height / this.width :
+          this.width / this.height
       }
 
       if (this.width >= this.height && this.width <= 500) {
@@ -140,6 +147,8 @@ class AvatarCropper extends Component {
       touchEndCoords
     } = this.drawParams
 
+    const { width, height } = this.props
+
     this.drawParams = {
       ...this.drawParams,
       mod: {
@@ -150,18 +159,18 @@ class AvatarCropper extends Component {
 
     const { mod: { x, y } } = this.drawParams
 
-    if (x < (this.canvas.width - finalWidth) - 160) {
-      this.modifyCoords({ x: (this.canvas.width - finalWidth) - 160 })
-    } else if (x > 160) {
-      this.modifyCoords({ x: 160 })
+    if (x < (this.canvas.width - finalWidth) - (500 - width) / 2) {
+      this.modifyCoords({ x: (this.canvas.width - finalWidth) - (500 - width) / 2 })
+    } else if (x > (500 - width) / 2) {
+      this.modifyCoords({ x: (500 - width) / 2 })
     } else {
       this.modifyCoords({ x })
     }
 
-    if (y < (this.canvas.height - finalHeight) - 160) {
-      this.modifyCoords({ y: (this.canvas.height - finalHeight) - 160 })
-    } else if (y > 160) {
-      this.modifyCoords({ y: 160 })
+    if (y < (this.canvas.height - finalHeight) - (500 - height) / 2) {
+      this.modifyCoords({ y: (this.canvas.height - finalHeight) - (500 - height) / 2 })
+    } else if (y > (500 - height) / 2) {
+      this.modifyCoords({ y: (500 - height) / 2 })
     } else {
       this.modifyCoords({ y })
     }
@@ -176,6 +185,7 @@ class AvatarCropper extends Component {
       const { max, min } = this.inputRange
       const { scaleValue } = this.state
       const { finalCoords: { x, y }, finalWidth, finalHeight } = this.drawParams
+      const { width, height } = this.props
 
       let nextWidth
       if (e.type === 'wheel' && e.deltaY > 1) {
@@ -188,18 +198,18 @@ class AvatarCropper extends Component {
 
       this.setState({ scaleValue: parseInt(nextWidth, 10) })
 
-      if (x < (this.canvas.width - nextWidth) - 160) {
-        this.modifyCoords({ x: (this.canvas.width - nextWidth) - 160 })
-      } else if (x > 160) {
-        this.modifyCoords({ x: 160 })
+      if (x < (this.canvas.width - nextWidth) - (500 - width) / 2) {
+        this.modifyCoords({ x: (this.canvas.width - nextWidth) - (500 - width) / 2 })
+      } else if (x > (500 - width) / 2) {
+        this.modifyCoords({ x: (500 - width) / 2 })
       } else {
         this.modifyCoords({ x: x + (finalWidth - nextWidth) / 2 })
       }
 
-      if (y < (this.canvas.height - nextWidth) - 160) {
-        this.modifyCoords({ y: (this.canvas.height - nextWidth) - 160 })
-      } else if (y > 160) {
-        this.modifyCoords({ y: 160 })
+      if (y < (this.canvas.height - nextWidth) - (500 - height) / 2) {
+        this.modifyCoords({ y: (this.canvas.height - nextWidth) - (500 - height) / 2 })
+      } else if (y > (500 - height) / 2) {
+        this.modifyCoords({ y: (500 - height) / 2 })
       } else {
         this.modifyCoords({ y: y + (finalHeight - nextWidth * this.drawParams.ratio) / 2 })
       }
@@ -327,6 +337,7 @@ class AvatarCropper extends Component {
   }
 
   render () {
+    const { width, height } = this.props
     const { scale } = this.state
 
     return (
@@ -361,6 +372,11 @@ class AvatarCropper extends Component {
         <div
           className="mask"
           style={{
+            borderTop: `${(500 - height) / 2}px solid rgba(252, 248, 240, .8)`,
+            borderLeft: `${(500 - width) / 2}px solid rgba(252, 248, 240, .8)`,
+            borderBottom: `${(500 - height) / 2}px solid rgba(252, 248, 240, .8)`,
+            borderRight: `${(500 - width) / 2}px solid rgba(252, 248, 240, .8)`,
+            boxShadow: '0 0 0 1px #d6d1c8, inset 0 0 0 1px #d6d1c8',
             transform: `scale(${scale}) translate(-50%)`,
             WebkitTransform: `scale(${scale}) translate(-50%)`
           }}
