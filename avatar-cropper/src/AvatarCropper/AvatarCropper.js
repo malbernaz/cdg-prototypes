@@ -203,30 +203,33 @@ class AvatarCropper extends Component {
         nextMeasure = e.target.value
       }
 
+      const nextWidth = width >= height ? nextMeasure * ratio : nextMeasure
+      const nextHeight = width >= height ? nextMeasure : nextMeasure * ratio
+
       this.setState({ scaleValue: parseInt(nextMeasure, 10) })
 
-      if (x < (this.canvas.width - nextMeasure) - marginX) {
-        this.modifyCoords({ x: (this.canvas.width - nextMeasure) - marginX })
+      if (x < (this.canvas.width - nextWidth) - marginX) {
+        this.modifyCoords({ x: (this.canvas.width - nextWidth) - marginX })
       } else if (x > marginX) {
         this.modifyCoords({ x: marginX })
       } else {
-        this.modifyCoords({ x: x + (finalWidth - nextMeasure) / 2 })
+        this.modifyCoords({ x: x + (finalWidth - nextWidth) / 2 })
       }
 
-      if (y < (this.canvas.height - nextMeasure) - marginY) {
-        this.modifyCoords({ y: (this.canvas.height - nextMeasure) - marginY })
+      if (y < (this.canvas.height - nextHeight) - marginY) {
+        this.modifyCoords({ y: (this.canvas.height - nextHeight) - marginY })
       } else if (y > marginY) {
         this.modifyCoords({ y: marginY })
       } else {
-        this.modifyCoords({ y: y + (finalHeight - nextMeasure * ratio) / 2 })
+        this.modifyCoords({ y: y + (finalHeight - nextHeight) / 2 })
       }
 
       this.drawParams = {
         ...this.drawParams,
         touchStart: { x: 0, y: 0 },
         touchPos: { x: 0, y: 0 },
-        finalWidth: width >= height ? nextMeasure * ratio : nextMeasure,
-        finalHeight: width >= height ? nextMeasure : nextMeasure * ratio,
+        finalWidth: nextWidth,
+        finalHeight: nextHeight,
         touchEndCoords: this.drawParams.finalCoords
       }
 
