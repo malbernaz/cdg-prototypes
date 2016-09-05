@@ -1,14 +1,14 @@
-.ImageCropperContainer {
+.CoverCropperContainer {
   margin: 0 auto;
   width: 100%;
   position: relative;
 }
 
-.ImageCropper {
+.CoverCropper {
   width: 100%;
 }
 
-.Dropzone {
+.dropzone {
   position: relative;
   height: 100%;
   width: 100%;
@@ -26,7 +26,7 @@
   cursor: -webkit-grab;
 }
 
-.ImageCropper__result {
+.canvas {
   position: absolute;
   top: 0;
   left: 0;

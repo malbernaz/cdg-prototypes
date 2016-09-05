@@ -12,7 +12,8 @@ class CoverCropper extends Component {
 
     this.state = {
       height: window.innerWidth * ratio >= height ? height : window.innerWidth * ratio,
-      scale: window.innerWidth >= width ? 1 : window.innerWidth / width
+      scale: window.innerWidth >= width ? 1 : window.innerWidth / width,
+      hasImage: false
     }
     this.drawParams = {
       image: false,
@@ -210,9 +211,9 @@ class CoverCropper extends Component {
           className="CoverCropper"
           style={{ height: this.state.height, maxWidth: this.props.width }}
         >
-          <Dropzone className="Dropzone" multiple={ false } onDrop={ this.onDrop } />
+          <Dropzone className="dropzone" multiple={ false } onDrop={ this.onDrop } />
           <canvas
-            className="CoverCropper__result"
+            className="canvas"
             height={ this.props.height }
             onMouseDown={ this.handleTouchStart }
             onMouseMove={ this.handleTouchMove }
@@ -232,14 +233,14 @@ class CoverCropper extends Component {
           />
           <div className="dragIndicatorContainer" style={{ maxWidth: this.props.width }}>
             { this.state.hasImage ?
-              <span className="dragIndicator"> arraste para reposicionar </span> : '' }
+              <span className="dragIndicator">arraste para reposicionar</span> : '' }
           </div>
           <button onClick={ this.handleSave } className="saveButton">save image</button>
         </div>
         <div
           className="mouseoutTrigger"
           onMouseMove={ this.handleMouseOut }
-          style={{ pointerEvents: this.image && this.state.dragging ? 'auto' : 'none' }}
+          style={{ pointerEvents: this.drawParams.image && this.state.dragging ? 'auto' : 'none' }}
         />
         <a ref={ c => { this.downloader = c } } style={{ display: 'none' }} />
       </div>

@@ -47,15 +47,17 @@ class AvatarCropper extends Component {
     const _this = this
 
     image.onload = function loadImage () {
+      const ratio = this.width / this.height
       _this.drawParams = {
         ..._this.drawParams,
         image: this,
         initialWidth: this.width,
         initialHeight: this.height,
-        ratio: this.width / this.height
+        ratio
       }
 
       if (this.width >= this.height && this.width <= 500) {
+        _this.inputRange.min = _this.props.height * ratio
         _this.inputRange.max = this.width * 2
         _this.setState({ hasImage: true, scaleValue: parseInt(this.width, 10) })
 
@@ -65,6 +67,7 @@ class AvatarCropper extends Component {
           finalHeight: this.height
         }
       } else if (this.width >= this.height) {
+        _this.inputRange.min = _this.props.height * ratio
         _this.inputRange.max = 1000
         _this.setState({ hasImage: true, scaleValue: 500 })
 
@@ -74,6 +77,7 @@ class AvatarCropper extends Component {
           finalHeight: 500 * (this.height / this.width)
         }
       } else if (this.height <= 500) {
+        _this.inputRange.min = _this.props.width / ratio
         _this.inputRange.max = this.height * 2
         _this.setState({ hasImage: true, scaleValue: parseInt(this.height, 10) })
 
@@ -83,6 +87,7 @@ class AvatarCropper extends Component {
           finalHeight: this.height
         }
       } else {
+        _this.inputRange.min = _this.props.width / ratio
         _this.inputRange.max = 1000
         _this.setState({ hasImage: true, scaleValue: 500 })
 
@@ -185,6 +190,7 @@ class AvatarCropper extends Component {
       const { max, min } = this.inputRange
       const { scaleValue } = this.state
       const {
+        image: { width, height },
         finalCoords: { x, y },
         finalWidth,
         finalHeight,
@@ -192,7 +198,6 @@ class AvatarCropper extends Component {
         marginY,
         ratio
       } = this.drawParams
-      const { width, height } = this.props
 
       let nextMeasure
       if (e.type === 'wheel' && e.deltaY > 1) {
@@ -203,8 +208,8 @@ class AvatarCropper extends Component {
         nextMeasure = e.target.value
       }
 
-      const nextWidth = width >= height ? nextMeasure * ratio : nextMeasure
-      const nextHeight = width >= height ? nextMeasure : nextMeasure * ratio
+      const nextWidth = width >= height ? nextMeasure : nextMeasure * ratio
+      const nextHeight = width >= height ? nextMeasure / ratio : nextMeasure
 
       this.setState({ scaleValue: parseInt(nextMeasure, 10) })
 
@@ -258,7 +263,9 @@ class AvatarCropper extends Component {
     e.preventDefault()
 
     const context = this.canvas.getContext('2d')
-    const imageData = context.getImageData(160, 160, 180, 180)
+    const { width, height } = this.props
+    const { marginX, marginY } = this.drawParams
+    const imageData = context.getImageData(marginX, marginY, width, height)
 
     this.worker.postMessage({ imageData, quality: 50 })
   }
@@ -274,7 +281,7 @@ class AvatarCropper extends Component {
   handleTouchStart = e => {
     e.preventDefault()
 
-    if (this.drawParams.image) {
+    if (this.state.hasImage) {
       this.setState({ dragging: true })
 
       const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
@@ -291,9 +298,9 @@ class AvatarCropper extends Component {
   handleTouchMove = e => {
     e.preventDefault()
 
-    if (this.state.dragging && this.drawParams.image) {
-      const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
-      const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+    if (this.state.dragging && this.state.hasImage) {
+      const posX = (e.touches ? e.touches[0].pageX : e.pageX) - this.canvas.offsetLeft
+      const posY = (e.touches ? e.touches[0].pageY : e.pageY) - this.canvas.offsetTop
 
       this.drawParams = {
         ...this.drawParams,
@@ -307,7 +314,7 @@ class AvatarCropper extends Component {
   handleTouchEnd = e => {
     e.preventDefault()
 
-    if (this.drawParams.image) {
+    if (this.state.hasImage) {
       this.setState({ dragging: false })
 
       this.drawParams = {
@@ -322,10 +329,10 @@ class AvatarCropper extends Component {
   handleMouseOut = e => {
     e.preventDefault()
 
-    if (this.drawParams.image) {
+    if (this.state.hasImage) {
       if (this.state.dragging && e.buttons === 1) {
-        const posX = (e.touches ? e.touches[0].pageX : e.pageX) - e.target.offsetLeft
-        const posY = (e.touches ? e.touches[0].pageY : e.pageY) - e.target.offsetTop
+        const posX = (e.touches ? e.touches[0].pageX : e.pageX) - this.canvas.offsetLeft
+        const posY = (e.touches ? e.touches[0].pageY : e.pageY) - this.canvas.offsetTop
 
         this.drawParams = {
           ...this.drawParams,
@@ -348,8 +355,7 @@ class AvatarCropper extends Component {
 
   render () {
     const { marginX, marginY } = this.drawParams
-    const { scale } = this.state
-    const { width, height } = this.props
+    const { scale, scaleValue, dragging, hasImage } = this.state
 
     return (
       <div className="AvatarCropper" ref={ c => { this.container = c } }>
@@ -374,7 +380,7 @@ class AvatarCropper extends Component {
           onWheel={ this.scaleImage }
           ref={ c => { this.canvas = c } }
           style={{
-            pointerEvents: this.state.hasImage ? 'auto' : 'none',
+            pointerEvents: hasImage ? 'auto' : 'none',
             transform: `scale(${scale}) translate(-50%)`,
             WebkitTransform: `scale(${scale}) translate(-50%)`
           }}
@@ -401,11 +407,11 @@ class AvatarCropper extends Component {
           <input
             className="InputRange"
             max={ 500 }
-            min={ width <= height ? width : height }
+            min={ 250 }
             onChange={ e => this.scaleImage(e) }
             ref={ c => { this.inputRange = c } }
             type="range"
-            value={ this.state.scaleValue }
+            value={ scaleValue }
           />
           <button
             className="saveButton"
@@ -417,7 +423,7 @@ class AvatarCropper extends Component {
         <div
           className="mouseoutTrigger"
           onMouseMove={ this.handleMouseOut }
-          style={{ pointerEvents: this.image && this.state.dragging ? 'auto' : 'none' }}
+          style={{ pointerEvents: hasImage && dragging ? 'auto' : 'none' }}
         />
         <a ref={ c => { this.downloader = c } } style={{ display: 'none' }} />
       </div>
